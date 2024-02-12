@@ -1,6 +1,12 @@
 import customtkinter
 import subprocess
 import string
+from pydub import AudioSegment
+from pydub.playback import play
+
+wrongAnswer = AudioSegment.from_mp3("./sfx/wrong-answer.mp3")
+loginSound = AudioSegment.from_mp3("./sfx/login.mp3")
+wrongPlaced = False
 
 def login():
     userName = entry1.get()
@@ -29,12 +35,23 @@ def login():
                 rememberedCred.write(passWord)
                 rememberedCred.close()
             print("Potty emitted")
+            indexFile = open("currentindex.txt", "w")
+            indexFile.write(str(index))
+            play(loginSound)
+            global wrongPlaced
+            if(wrongPlaced == True):
+                wrongLabel.place_forget()
             root.withdraw()
             subprocess.run(['python', './mainappy.py'])
             print("Subprocess ran")
         index = index + 1
+        
     #print("Butt")
+    play(wrongAnswer)
+    wrongPlaced = True
+    wrongLabel.place(relx = 0.215, rely = 0.92)
     return
+    
             
 #window
 oldCred = []
@@ -44,6 +61,7 @@ for i in remCred:
     oldCred.append(i)
 if(len(oldCred) != 0):
     runLogin = False
+    play(loginSound)
     subprocess.run(['python', './mainappy.py'])
 if(runLogin == True):
     customtkinter.set_appearance_mode("dark")
@@ -56,7 +74,7 @@ if(runLogin == True):
     label.pack(pady = 20, padx = 10)
     entry1 = customtkinter.CTkEntry(master = frame, placeholder_text="Username")
     entry1.pack(pady = 20, padx = 10)
-
+    
     entry2 = customtkinter.CTkEntry(master = frame, placeholder_text="Password", show = "*")
     entry2.pack(pady = 20, padx = 10)
     button = customtkinter.CTkButton(master = frame, text = "Login", command = login)
@@ -64,4 +82,5 @@ if(runLogin == True):
 
     checkbox = customtkinter.CTkCheckBox(master = frame, text = "Remember Me")
     checkbox.pack(pady = 20, padx = 10)
+    wrongLabel = customtkinter.CTkLabel(master = frame, text = "Wrong credentials", font = ("Roboto", 20))
     root.mainloop()

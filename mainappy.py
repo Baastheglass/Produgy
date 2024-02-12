@@ -5,16 +5,77 @@ import datetime
 import subprocess 
 from ultralytics import YOLO
 import cv2
+from pydub import AudioSegment
+from pydub.playback import play
 
+timerSound = AudioSegment.from_mp3("./sfx/done.mp3")
+doneSound = AudioSegment.from_mp3("./sfx/taskfin.mp3")
 model = YOLO('yolov8n.pt')
 cap = cv2.VideoCapture(0)
+threads = []
+stopTimer = threading.Event()
+stopTimer.clear()
 
+def playTimerStart():
+    play(timerSound)
+    return
+def playDoneSound():
+    play(doneSound)
+    return
+
+threads.append(threading.Thread(target = playTimerStart)) #index 0 is timerStart
+threads.append(threading.Thread(target = playDoneSound)) #index 1 is doneSound
 detect = False
-    
+
+def on_close():
+    print("On close entered")
+    if(cap.isOpened()):
+            cap.release()
+            cv2.destroyAllWindows()
+    print("Cap destroyed")
+    stopTimer.set()
+    print("Timer stopped")
+    root.destroy()
+            
 def checkDay():
     today = datetime.datetime.today()
-    if(today.weekday() == 0):
+    if(today.weekday() == 0 and displayed != True):
+        dayisNow = True
+    else:
+        dayisNow = False
+    if(dayisNow == True):
         subprocess.run(['python', './weeklyReview.py'])
+        dayisNow = False
+
+def horseDetection():
+    model = YOLO('yolov8n.pt')
+    cap = cv2.VideoCapture(0)
+    while cap.isOpened():
+        success, frame = cap.read()
+        if success:
+            results = model(frame)
+            #check for horse
+            for result in results:
+                for classvalue in result.boxes.cls:
+                    if(classvalue.item() == 17):
+                        print("HORSE FOUND")
+                        cap.release()
+                        cv2.destroyAllWindows()
+                        break
+                    else:
+                        print("HORSE NOT FOUND")
+                        cap.release()
+                        cv2.destroyAllWindows()
+                        break
+    return
+            
+def runWeeklyReview():
+    global displayed
+    displayed = False
+    if(dayisNow == True):
+        subprocess.run(['python', './weeklyReview.py'])
+        dayisNow = False
+        displayed = True
     file = open("./pomodoros.txt", "w")
     file.write("0")
     file.close()
@@ -24,12 +85,18 @@ def checkDay():
 
 def checkTrue():
     global detect
-    detect = True
+    if(detect == False):
+        detect = True
+        objectDetectButton.configure(bg_color = "gray", fg_color = "gray")
+        objectDetectButton._hover_color = "black"
+    else:
+        detect = False
+        objectDetectButton.configure(bg_color = originalBackColour, fg_color = originalForeColour)
+        objectDetectButton._hover_color = originalHoverColour
     
 def timerStart():
+    threads[0].start()
     customtkinter.set_appearance_mode("light")
-    objectDetectButton.configure(bg_color = originalBackColour, fg_color = originalForeColour)
-    objectDetectButton._hover_color = originalHoverColour
     t = int(enterTime.get())
     duration = t * 60
     start_time = time.time()    
@@ -60,27 +127,30 @@ def timerStart():
         progressBar.start()
         while(((time.time() - start_time) < duration)):
             print("Pomodoro ongoing")
-            
-        
-        
-
+        print("While ended")
     progressBar.stop()
-    file = open("./pomodoros.txt", "r")
-    pomodoroNum = file.read()
-    print(pomodoroNum)
-    int(pomodoroNum)
-    pomodoroNum = int(pomodoroNum) + 1
-    file.close()
-    file = open("./pomodoros.txt", "w")
-    file.write(str(pomodoroNum))
-    file.close()
+    # file = open("./pomodoros.txt", "r")
+    # indexFile = open("./currentindex.txt", "r")
+    # index = indexFile.read()
+    # index.strip()
+    # print(index)
+    # index = int(index)
+    # print(index)
+    # pomodoroNum = file.read()
+    # print(pomodoroNum[index - 1])
+    # pomodoroNum[index - 1] = int(pomodoroNum[index - 1]) + 1
+    # file.close()
+    # file = open("./pomodoros.txt", "w")
+    # file.write(pomodoroNum)
+    # file.close()
     customtkinter.set_appearance_mode("dark")
 
 def threadTimer():
-    timerThread = threading.Thread(target = timerStart)
-    timerThread.start()    
+    threads.append(threading.Thread(target = timerStart))
+    threads[2].start()    
 
 def done15():
+    play(doneSound)
     label15.configure(bg_color = "green")
     tickbutton15.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del15)
     tickbutton15._hover_color = "#A83246"
@@ -111,6 +181,7 @@ def del15():
     task15.place(relx = 0, rely = 0.94)
 
 def done14():
+    play(doneSound)
     label14.configure(bg_color = "green")
     tickbutton14.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del14)
     tickbutton14._hover_color = "#A83246"
@@ -147,6 +218,7 @@ def del14():
     task14.place(relx = 0, rely = 0.88)
 
 def done13():
+    play(doneSound)
     label13.configure(bg_color = "green")
     tickbutton13.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del13)
     tickbutton13._hover_color = "#A83246"
@@ -183,6 +255,7 @@ def del13():
     task13.place(relx = 0, rely = 0.82)
 
 def done12():
+    play(doneSound)
     label12.configure(bg_color = "green")
     tickbutton12.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del12)
     tickbutton12._hover_color = "#A83246"
@@ -219,6 +292,7 @@ def del12():
     task12.place(relx = 0, rely = 0.76)
 
 def done11():
+    play(doneSound)
     label11.configure(bg_color = "green")
     tickbutton11.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del11)
     tickbutton11._hover_color = "#A83246"
@@ -255,6 +329,7 @@ def del11():
     task11.place(relx = 0, rely = 0.70)
 
 def done10():
+    play(doneSound)
     label10.configure(bg_color = "green")
     tickbutton10.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del10)
     tickbutton10._hover_color = "#A83246"
@@ -291,6 +366,7 @@ def del10():
     task10.place(relx = 0, rely = 0.64)
 
 def done9():
+    play(doneSound)
     label9.configure(bg_color = "green")
     tickbutton9.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del9)
     tickbutton9._hover_color = "#A83246"
@@ -327,6 +403,7 @@ def del9():
     task9.place(relx = 0, rely = 0.58)
 
 def done8():
+    play(doneSound)
     label8.configure(bg_color = "green")
     tickbutton8.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del8)
     tickbutton8._hover_color = "#A83246"
@@ -363,6 +440,7 @@ def del8():
     task8.place(relx = 0, rely = 0.52)
 
 def done7():
+    play(doneSound)
     label7.configure(bg_color = "green")
     tickbutton7.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del7)
     tickbutton7._hover_color = "#A83246"
@@ -399,6 +477,7 @@ def del7():
     task7.place(relx = 0, rely = 0.46)
 
 def done6():
+    play(doneSound)
     label6.configure(bg_color = "green")
     tickbutton6.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del6)
     tickbutton6._hover_color = "#A83246"
@@ -435,6 +514,7 @@ def del6():
     task6.place(relx = 0, rely = 0.40)
 
 def done5():
+    play(doneSound)
     label5.configure(bg_color = "green")
     tickbutton5.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del5)
     tickbutton5._hover_color = "#A83246"
@@ -471,6 +551,7 @@ def del5():
     task5.place(relx = 0, rely = 0.34)
 
 def done4():
+    play(doneSound)
     label4.configure(bg_color = "green")
     tickbutton4.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del4)
     tickbutton4._hover_color = "#A83246"
@@ -507,6 +588,7 @@ def del4():
     task4.place(relx = 0, rely = 0.28)
 
 def done3():
+    play(doneSound)
     label3.configure(bg_color = "green")
     tickbutton3.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del3)
     tickbutton3._hover_color = "#A83246"
@@ -543,6 +625,7 @@ def del3():
     task3.place(relx = 0, rely = 0.22)
 
 def done2():
+    play(doneSound)
     label2.configure(bg_color = "green")
     tickbutton2.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del2)
     tickbutton2._hover_color = "#A83246"
@@ -579,6 +662,7 @@ def del2():
     task2.place(relx = 0, rely = 0.16)
 
 def done1():
+    play(doneSound)
     label1.configure(bg_color = "green")
     tickbutton1.configure(text = "DEL", bg_color = "red", fg_color = "red", width = 20, font = ("Roboto", 27), command = del1)
     tickbutton1._hover_color = "#A83246"
@@ -623,6 +707,7 @@ customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("dark-blue")
 root = customtkinter.CTk()
 root.geometry("1366x768")
+root.protocol("WM_DELETE_WINDOW", on_close)
 frame = customtkinter.CTkFrame(master = root, height = 768, width = 315, bg_color = "black", corner_radius= 0)
 task1 = customtkinter.CTkEntry(master = frame, height = 40, width = 240, font = ("Roboto", 25), bg_color = "gray")
 tickbutton1 = customtkinter.CTkButton(master = frame, text = "ADD", font = ("Roboto", 25), height = 40, width = 20, command=addFunc1)
@@ -654,9 +739,10 @@ tickbutton14 = customtkinter.CTkButton(master = frame, text = "ADD", font = ("Ro
 task15 = customtkinter.CTkEntry(master = frame, height = 40, width = 240, font = ("Roboto", 25), bg_color = "gray")
 tickbutton15 = customtkinter.CTkButton(master = frame, text = "ADD", font = ("Roboto", 25), height = 40, width = 20)
 check = False
-objectDetectButton = customtkinter.CTkButton(master = root, text = "DETECT", font = ("Roboto", 25), height = 40, width = 20, bg_color = "gray", fg_color = "gray", command = checkTrue)
-objectDetectButton._hover_color = "gray"
+objectDetectButton = customtkinter.CTkButton(master = root, text = "DETECT", font = ("Roboto", 25), height = 40, width = 20, command = checkTrue)
 objectDetectButton.place(relx = 0.92, rely = 0.01)
+horseDetectButton = customtkinter.CTkButton(master = root, text = "DETECT HORSE", font = ("Roboto", 20), height = 40, width = 20, command = horseDetection)
+horseDetectButton.place(relx = 0.8, rely = 0.01)
 tasks = []
 tickbuttons = []
 tasks.append(task1)
@@ -731,5 +817,6 @@ enterTimeLabel.place(relx = 0.50, rely = 0.8)
 enterTime.place(relx = 0.63, rely = 0.8)
 start.place(relx = 0.54, rely = 0.89)
 tasksLabel.place(relx = 0.02, rely = 0.005)
+
 checkDay()
 root.mainloop()
